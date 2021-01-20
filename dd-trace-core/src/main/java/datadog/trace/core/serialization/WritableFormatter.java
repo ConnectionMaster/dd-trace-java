@@ -1,3 +1,5 @@
 package datadog.trace.core.serialization;
 
-public interface WritableFormatter extends Writable, MessageFormatter {}
+public interface WritableFormatter extends Writable, MessageFormatter {
+  void mark();
+}

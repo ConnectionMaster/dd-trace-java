@@ -22,6 +22,8 @@ import okio.BufferedSink;
 
 public final class OkHttpUtils {
 
+  static final MediaType MSGPACK = MediaType.get("application/msgpack");
+
   private static final String DATADOG_META_LANG = "Datadog-Meta-Lang";
   private static final String DATADOG_META_LANG_VERSION = "Datadog-Meta-Lang-Version";
   private static final String DATADOG_META_LANG_INTERPRETER = "Datadog-Meta-Lang-Interpreter";
@@ -80,13 +82,15 @@ public final class OkHttpUtils {
     }
   }
 
+  public static PipedRequestBody pipedMsgPackRequestBody() {
+    return new PipedRequestBody();
+  }
+
   public static RequestBody msgpackRequestBodyOf(List<ByteBuffer> buffers) {
     return new ByteBufferRequestBody(buffers);
   }
 
   private static final class ByteBufferRequestBody extends RequestBody {
-
-    private static final MediaType MSGPACK = MediaType.get("application/msgpack");
 
     private final List<ByteBuffer> buffers;
 

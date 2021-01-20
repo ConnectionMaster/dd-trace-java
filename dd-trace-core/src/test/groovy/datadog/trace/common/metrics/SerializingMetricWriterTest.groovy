@@ -2,6 +2,11 @@ package datadog.trace.common.metrics
 
 import datadog.trace.api.WellKnownTags
 import datadog.trace.bootstrap.instrumentation.api.Pair
+import datadog.trace.core.http.StreamingSession
+import datadog.trace.core.serialization.ByteBufferConsumer
+import datadog.trace.core.serialization.FlushingBuffer
+import datadog.trace.core.serialization.WritableFormatter
+import datadog.trace.core.serialization.msgpack.MsgPackWriter
 import datadog.trace.test.util.DDSpecification
 import org.msgpack.core.MessagePack
 import org.msgpack.core.MessageUnpacker
@@ -46,13 +51,17 @@ class SerializingMetricWriterTest extends DDSpecification {
   }
 
 
-  class ValidatingSink implements Sink {
+  /**
+   * Intercepts serialization and validates when the session is closed
+   */
+  class ValidatingSink implements Sink, ByteBufferConsumer {
 
     private final WellKnownTags wellKnownTags
     private final long startTimeNanos
     private final long duration
     private boolean validated = false
     private List<Pair<MetricKey, AggregateMetric>> content
+    private final WritableFormatter writer
 
     ValidatingSink(WellKnownTags wellKnownTags, long startTimeNanos, long duration,
                    List<Pair<MetricKey, AggregateMetric>> content) {
@@ -60,6 +69,22 @@ class SerializingMetricWriterTest extends DDSpecification {
       this.startTimeNanos = startTimeNanos
       this.duration = duration
       this.content = content
+      this.writer = new MsgPackWriter(new FlushingBuffer(512 << 10, this))
+    }
+
+    @Override
+    StreamingSession startSession() {
+      return new StreamingSession() {
+        @Override
+        WritableFormatter writer() {
+          return writer
+        }
+
+        @Override
+        void close() throws Exception {
+          writer.flush()
+        }
+      }
     }
 
     @Override

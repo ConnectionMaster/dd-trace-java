@@ -1,6 +1,9 @@
 package datadog.trace.common.metrics
 
 import datadog.trace.api.WellKnownTags
+import datadog.trace.core.http.StreamingSession
+import datadog.trace.core.serialization.StreamingBuffer
+import datadog.trace.core.serialization.msgpack.MsgPackWriter
 import datadog.trace.test.util.DDSpecification
 import org.openjdk.jol.info.GraphLayout
 import spock.lang.Requires
@@ -18,7 +21,11 @@ class FootprintTest extends DDSpecification {
   def "footprint less than 5MB"() {
     setup:
     CountDownLatch latch = new CountDownLatch(1)
+    MsgPackWriter writer = new MsgPackWriter(Stub(StreamingBuffer))
+    StreamingSession session = Mock(StreamingSession)
+    session.writer() >> writer
     Sink sink = Mock(Sink)
+    sink.startSession() >> session
     ConflatingMetricsAggregator aggregator = new ConflatingMetricsAggregator(
       new WellKnownTags("hostname", "env", "service", "version"),
       sink,
@@ -52,7 +59,7 @@ class FootprintTest extends DDSpecification {
     latch.await(10, SECONDS)
 
     then:
-    1 * sink.accept(_, _) >> {
+    1 * session.close() >> {
       GraphLayout layout = GraphLayout.parseInstance(aggregator.aggregator.aggregates)
       System.err.println(layout.toFootprint())
       size.set(layout.totalSize())

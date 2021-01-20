@@ -538,4 +538,9 @@ public class MsgPackWriter implements WritableFormatter {
       buffer.putInt(length);
     }
   }
+
+  @Override
+  public void mark() {
+    buffer.mark();
+  }
 }
